@@ -11,17 +11,18 @@ import (
 	"github.com/google/uuid"
 )
 
-func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
+type chirpStruct struct {
+	Id         uuid.UUID `json:"id"`
+	Created_at time.Time `json:"created_at"`
+	Updated_at time.Time `json:"updated_at"`
+	Body       string    `json:"body"`
+	User_id    uuid.UUID `json:"user_id"`
+}
+
+func (cfg *apiConfig) handlerCreateChirps(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body   string    `json:"body"`
 		UserId uuid.UUID `json:"user_id"`
-	}
-	type returnVals struct {
-		Id         uuid.UUID `json:"id"`
-		Created_at time.Time `json:"created_at"`
-		Updated_at time.Time `json:"updated_at"`
-		Body       string    `json:"body"`
-		User_id    uuid.UUID `json:"user_id"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -43,14 +44,35 @@ func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
 	chirp, err := cfg.dbQueries.CreateChirp(r.Context(), chirpParams)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "couldn't created chirp", err)
+		return
 	}
-	respondWithJSON(w, http.StatusCreated, returnVals{
+	respondWithJSON(w, http.StatusCreated, chirpStruct{
 		Id:         chirp.ID,
 		Created_at: chirp.CreatedAt,
 		Updated_at: chirp.UpdatedAt,
 		Body:       chirp.Body,
 		User_id:    chirp.UserID,
 	})
+}
+
+func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	chirps, err := cfg.dbQueries.GetChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't fetch chirps", err)
+		return
+	}
+	jsonChirps := []chirpStruct{}
+	for _, chirp := range chirps {
+		jsonChirp := chirpStruct{
+			Id:         chirp.ID,
+			Created_at: chirp.CreatedAt,
+			Updated_at: chirp.UpdatedAt,
+			Body:       chirp.Body,
+			User_id:    chirp.UserID,
+		}
+		jsonChirps = append(jsonChirps, jsonChirp)
+	}
+	respondWithJSON(w, http.StatusOK, jsonChirps)
 }
 
 func badWordReplacement(s string) string {
