@@ -1,0 +1,71 @@
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/AlRowne/chirpy/internal/database"
+	"github.com/google/uuid"
+)
+
+func (cfg *apiConfig) handlerChirps(w http.ResponseWriter, r *http.Request) {
+	type parameters struct {
+		Body   string    `json:"body"`
+		UserId uuid.UUID `json:"user_id"`
+	}
+	type returnVals struct {
+		Id         uuid.UUID `json:"id"`
+		Created_at time.Time `json:"created_at"`
+		Updated_at time.Time `json:"updated_at"`
+		Body       string    `json:"body"`
+		User_id    uuid.UUID `json:"user_id"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	err := decoder.Decode(&params)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "couldn't decode parameters", err)
+		return
+	}
+	if len(params.Body) > 140 {
+		respondWithError(w, http.StatusBadRequest, "Chirp is too long", nil)
+		return
+	}
+	// params.Body = badWordReplacement(params.Body)
+	chirpParams := database.CreateChirpParams{
+		Body:   params.Body,
+		UserID: params.UserId,
+	}
+	chirp, err := cfg.dbQueries.CreateChirp(r.Context(), chirpParams)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't created chirp", err)
+	}
+	respondWithJSON(w, http.StatusCreated, returnVals{
+		Id:         chirp.ID,
+		Created_at: chirp.CreatedAt,
+		Updated_at: chirp.UpdatedAt,
+		Body:       chirp.Body,
+		User_id:    chirp.UserID,
+	})
+}
+
+func badWordReplacement(s string) string {
+	badWords := []string{"kerfuffle", "sharbert", "fornax"}
+	words := strings.Fields(s)
+	cleanedWords := []string{}
+
+	for _, w := range words {
+		if slices.Contains(badWords, strings.ToLower(w)) {
+			cleanedWords = append(cleanedWords, "****")
+		} else {
+			cleanedWords = append(cleanedWords, w)
+		}
+	}
+
+	return strings.Join(cleanedWords, " ")
+
+}
