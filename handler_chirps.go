@@ -75,6 +75,27 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, jsonChirps)
 }
 
+func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request) {
+	chirpIDString := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(chirpIDString)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "couldn't parse uuid", err)
+		return
+	}
+	chirp, err := cfg.dbQueries.GetChirpByID(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "couldn't fetch chirp", err)
+	}
+	respondWithJSON(w, http.StatusOK, chirpStruct{
+		Id:         chirp.ID,
+		Created_at: chirp.CreatedAt,
+		Updated_at: chirp.UpdatedAt,
+		Body:       chirp.Body,
+		User_id:    chirp.UserID,
+	})
+
+}
+
 func badWordReplacement(s string) string {
 	badWords := []string{"kerfuffle", "sharbert", "fornax"}
 	words := strings.Fields(s)
