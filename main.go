@@ -17,6 +17,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	dbQueries      *database.Queries
 	Platform       string
+	Secret         string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -72,6 +73,7 @@ func main() {
 	var apiCfg apiConfig
 	apiCfg.dbQueries = dbQueries
 	apiCfg.Platform = os.Getenv("PLATFORM")
+	apiCfg.Secret = os.Getenv("SECRET")
 
 	handlerRoot := http.StripPrefix("/app/", http.FileServer(http.Dir(filepathRoot)))
 

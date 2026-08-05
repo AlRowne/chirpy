@@ -11,8 +11,9 @@ import (
 )
 
 type request struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	ExpiresInSeconds int    `json:"expires_in_seconds"`
 }
 
 type response struct {
@@ -20,6 +21,7 @@ type response struct {
 	Created_at time.Time `json:"created_at"`
 	Updated_at time.Time `json:"updated_at"`
 	Email      string    `json:"email"`
+	Token      string    `json:"token"`
 }
 
 func (cfg *apiConfig) handlerUsers(w http.ResponseWriter, r *http.Request) {
@@ -67,10 +69,22 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	user, err := cfg.dbQueries.GetUserByEmail(r.Context(), req.Email)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		return
 	}
 	match, err := auth.CheckPasswordHash(req.Password, user.HashedPassword)
 	if err != nil || !match {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
+		return
+	}
+	seconds := 3600
+	if req.ExpiresInSeconds > 0 && req.ExpiresInSeconds < 3600 {
+		seconds = req.ExpiresInSeconds
+	}
+	duration := time.Duration(seconds) * time.Second
+
+	token, err := auth.MakeJWT(user.ID, cfg.Secret, duration)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't make JWT", err)
 		return
 	}
 
@@ -79,5 +93,6 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		Created_at: user.CreatedAt,
 		Updated_at: user.UpdatedAt,
 		Email:      user.Email,
+		Token:      token,
 	})
 }

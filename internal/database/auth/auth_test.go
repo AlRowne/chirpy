@@ -1,6 +1,7 @@
 package auth_test
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -175,6 +176,67 @@ func TestValidateJWTInvalidSubject(t *testing.T) {
 	_, err = auth.ValidateJWT(tokenString, secret)
 	if err == nil {
 		t.Error("expected an error for a non-UUID subject, got nil")
+	}
+}
+
+func TestGetBearerToken(t *testing.T) {
+	tests := []struct {
+		name         string
+		authorizaton string
+		wantToken    string
+		wantErr      bool
+	}{
+		{
+			name:         "valid bearer token",
+			authorizaton: "Bearer abc.def.ghi",
+			wantToken:    "abc.def.ghi",
+		},
+		{
+			name:         "valid bearer token with extra whitespace",
+			authorizaton: "  Bearer   abc.def.ghi  ",
+			wantToken:    "abc.def.ghi",
+		},
+		{
+			name:    "missing authorization header",
+			wantErr: true,
+		},
+		{
+			name:         "wrong authentication scheme",
+			authorizaton: "Basic abc.def.ghi",
+			wantErr:      true,
+		},
+		{
+			name:         "missing token",
+			authorizaton: "Bearer",
+			wantErr:      true,
+		},
+		{
+			name:         "invalid bearer prefix",
+			authorizaton: "BearerXYZ abc.def.ghi",
+			wantErr:      true,
+		},
+		{
+			name:         "too many header values",
+			authorizaton: "Bearer abc.def.ghi extra",
+			wantErr:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headers := http.Header{}
+			if tt.authorizaton != "" {
+				headers.Set("Authorization", tt.authorizaton)
+			}
+
+			gotToken, err := auth.GetBearerToken(headers)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("GetBearerToken() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && gotToken != tt.wantToken {
+				t.Errorf("GetBearerToken() = %q, want %q", gotToken, tt.wantToken)
+			}
+		})
 	}
 }
 
