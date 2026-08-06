@@ -11,17 +11,28 @@ import (
 )
 
 type request struct {
-	Email            string `json:"email"`
-	Password         string `json:"password"`
-	ExpiresInSeconds int    `json:"expires_in_seconds"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
-type response struct {
-	Id         uuid.UUID `json:"id"`
-	Created_at time.Time `json:"created_at"`
-	Updated_at time.Time `json:"updated_at"`
-	Email      string    `json:"email"`
-	Token      string    `json:"token"`
+type userResponse struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+}
+
+type loginResponse struct {
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
+}
+
+type refreshResponse struct {
+	Token string `json:"token"`
 }
 
 func (cfg *apiConfig) handlerUsers(w http.ResponseWriter, r *http.Request) {
@@ -47,11 +58,11 @@ func (cfg *apiConfig) handlerUsers(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "couldn't create user", err)
 		return
 	}
-	resp := response{
-		Id:         user.ID,
-		Created_at: user.CreatedAt,
-		Updated_at: user.UpdatedAt,
-		Email:      user.Email,
+	resp := userResponse{
+		ID:        user.ID,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+		Email:     user.Email,
 	}
 	respondWithJSON(w, http.StatusCreated, resp)
 
@@ -76,23 +87,62 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusUnauthorized, "Incorrect email or password", err)
 		return
 	}
-	seconds := 3600
-	if req.ExpiresInSeconds > 0 && req.ExpiresInSeconds < 3600 {
-		seconds = req.ExpiresInSeconds
-	}
-	duration := time.Duration(seconds) * time.Second
-
-	token, err := auth.MakeJWT(user.ID, cfg.Secret, duration)
+	token, err := auth.MakeJWT(user.ID, cfg.Secret, time.Hour)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "couldn't make JWT", err)
 		return
 	}
+	refreshParams := database.CreateRefreshTokenParams{
+		Token:  auth.MakeRefreshToken(),
+		UserID: user.ID,
+	}
+	if err := cfg.dbQueries.CreateRefreshToken(r.Context(), refreshParams); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't create refresh token", err)
+		return
+	}
 
-	respondWithJSON(w, http.StatusOK, response{
-		Id:         user.ID,
-		Created_at: user.CreatedAt,
-		Updated_at: user.UpdatedAt,
-		Email:      user.Email,
-		Token:      token,
+	respondWithJSON(w, http.StatusOK, loginResponse{
+		ID:           user.ID,
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        token,
+		RefreshToken: refreshParams.Token,
 	})
+}
+
+func (cfg *apiConfig) handlerRefresh(w http.ResponseWriter, r *http.Request) {
+	refreshToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "couldn't get token", err)
+		return
+	}
+	dbUser, err := cfg.dbQueries.GetUserFromRefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "unauthorized", err)
+		return
+	}
+	token, err := auth.MakeJWT(dbUser.ID, cfg.Secret, time.Hour)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't make JWT", err)
+		return
+	}
+	respondWithJSON(w, http.StatusOK, refreshResponse{
+		Token: token,
+	})
+
+}
+
+func (cfg *apiConfig) handlerRevoke(w http.ResponseWriter, r *http.Request) {
+	refreshToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "couldn't get token", err)
+		return
+	}
+	err = cfg.dbQueries.RevokeRefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "couldn't revoke token", err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
