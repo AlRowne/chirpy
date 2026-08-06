@@ -18,6 +18,7 @@ type apiConfig struct {
 	dbQueries      *database.Queries
 	Platform       string
 	Secret         string
+	PolkaKey       string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -74,6 +75,7 @@ func main() {
 	apiCfg.dbQueries = dbQueries
 	apiCfg.Platform = os.Getenv("PLATFORM")
 	apiCfg.Secret = os.Getenv("SECRET")
+	apiCfg.PolkaKey = os.Getenv("POLKA_KEY")
 
 	handlerRoot := http.StripPrefix("/app/", http.FileServer(http.Dir(filepathRoot)))
 

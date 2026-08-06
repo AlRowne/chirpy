@@ -3,8 +3,6 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/AlRowne/chirpy/internal/database"
@@ -138,21 +136,4 @@ func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func badWordReplacement(s string) string {
-	badWords := []string{"kerfuffle", "sharbert", "fornax"}
-	words := strings.Fields(s)
-	cleanedWords := []string{}
-
-	for _, w := range words {
-		if slices.Contains(badWords, strings.ToLower(w)) {
-			cleanedWords = append(cleanedWords, "****")
-		} else {
-			cleanedWords = append(cleanedWords, w)
-		}
-	}
-
-	return strings.Join(cleanedWords, " ")
-
 }

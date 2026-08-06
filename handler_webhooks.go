@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/AlRowne/chirpy/internal/database/auth"
 	"github.com/google/uuid"
 )
 
@@ -15,9 +16,18 @@ type requestWebhook struct {
 }
 
 func (cfg *apiConfig) handlerWebhooks(w http.ResponseWriter, r *http.Request) {
+	polkaKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "unauthorized", err)
+		return
+	}
+	if polkaKey != cfg.PolkaKey {
+		respondWithError(w, http.StatusUnauthorized, "unauthorized", err)
+		return
+	}
 	decoder := json.NewDecoder(r.Body)
 	req := requestWebhook{}
-	err := decoder.Decode(&req)
+	err = decoder.Decode(&req)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "couldn't decode json", err)
 		return
