@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type chirpStruct struct {
+type chirpResponse struct {
 	Id         uuid.UUID `json:"id"`
 	Created_at time.Time `json:"created_at"`
 	Updated_at time.Time `json:"updated_at"`
@@ -55,7 +55,7 @@ func (cfg *apiConfig) handlerCreateChirps(w http.ResponseWriter, r *http.Request
 		respondWithError(w, http.StatusInternalServerError, "couldn't created chirp", err)
 		return
 	}
-	respondWithJSON(w, http.StatusCreated, chirpStruct{
+	respondWithJSON(w, http.StatusCreated, chirpResponse{
 		Id:         chirp.ID,
 		Created_at: chirp.CreatedAt,
 		Updated_at: chirp.UpdatedAt,
@@ -70,9 +70,9 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusInternalServerError, "couldn't fetch chirps", err)
 		return
 	}
-	jsonChirps := []chirpStruct{}
+	jsonChirps := []chirpResponse{}
 	for _, chirp := range chirps {
-		jsonChirp := chirpStruct{
+		jsonChirp := chirpResponse{
 			Id:         chirp.ID,
 			Created_at: chirp.CreatedAt,
 			Updated_at: chirp.UpdatedAt,
@@ -96,7 +96,7 @@ func (cfg *apiConfig) handlerGetChirpByID(w http.ResponseWriter, r *http.Request
 		respondWithError(w, http.StatusNotFound, "couldn't fetch chirp", err)
 		return
 	}
-	respondWithJSON(w, http.StatusOK, chirpStruct{
+	respondWithJSON(w, http.StatusOK, chirpResponse{
 		Id:         chirp.ID,
 		Created_at: chirp.CreatedAt,
 		Updated_at: chirp.UpdatedAt,
