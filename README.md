@@ -121,4 +121,4 @@ Review generated changes before committing them.
 
 ## License
 
-No license has been specified for this project yet.
+This project is licensed under the [MIT License](LICENSE).
