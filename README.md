@@ -94,7 +94,7 @@ It contains request formats, authentication requirements, response behavior, and
 ├── handler_webhooks.go             # Polka webhook handler
 ├── json.go                         # Shared JSON response helpers
 ├── internal/database               # sqlc-generated PostgreSQL code
-│   └── auth                       # Password, JWT, and token helpers
+│   └── auth                        # Password, JWT, and token helpers
 ├── sql/schema                      # Database migrations
 ├── sql/queries                     # SQL queries used by sqlc
 └── index.html                      # Static application page
