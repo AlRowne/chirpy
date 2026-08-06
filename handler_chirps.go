@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/AlRowne/chirpy/internal/database"
@@ -64,6 +65,7 @@ func (cfg *apiConfig) handlerCreateChirps(w http.ResponseWriter, r *http.Request
 
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	author_id := r.URL.Query().Get("author_id")
+	sorting := r.URL.Query().Get("sort")
 	if author_id != "" {
 		userID, err := uuid.Parse(author_id)
 		if err != nil {
@@ -71,6 +73,11 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		chirps, err := cfg.dbQueries.GetChirpsByUserId(r.Context(), userID)
+		if sorting == "desc" {
+			slices.SortFunc(chirps, func(a, b database.Chirp) int {
+				return b.CreatedAt.Compare(a.CreatedAt)
+			})
+		}
 		jsonChirps := []chirpResponse{}
 		for _, chirp := range chirps {
 			jsonChirp := chirpResponse{
@@ -82,6 +89,7 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 			}
 			jsonChirps = append(jsonChirps, jsonChirp)
 		}
+
 		respondWithJSON(w, http.StatusOK, jsonChirps)
 		return
 	}
@@ -89,6 +97,11 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "couldn't fetch chirps", err)
 		return
+	}
+	if sorting == "desc" {
+		slices.SortFunc(chirps, func(a, b database.Chirp) int {
+			return b.CreatedAt.Compare(a.CreatedAt)
+		})
 	}
 	jsonChirps := []chirpResponse{}
 	for _, chirp := range chirps {
