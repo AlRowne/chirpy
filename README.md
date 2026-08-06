@@ -97,7 +97,9 @@ It contains request formats, authentication requirements, response behavior, and
 │   └── auth                        # Password, JWT, and token helpers
 ├── sql/schema                      # Database migrations
 ├── sql/queries                     # SQL queries used by sqlc
-└── index.html                      # Static application page
+├── docs/API.md                     # Detailed API reference
+├── index.html                      # Static application page
+└── LICENSE                         # MIT License
 ```
 
 ## Regenerating database code
