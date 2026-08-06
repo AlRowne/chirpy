@@ -73,20 +73,6 @@ http://localhost:8080
 
 The application loads environment variables from `.env` during startup and exits if the file cannot be loaded or the database cannot be opened.
 
-## Testing
-
-Run all tests with:
-
-```bash
-go test ./...
-```
-
-Format the Go source files with:
-
-```bash
-gofmt -w *.go internal/database/auth/*.go
-```
-
 ## API reference
 
 Unless stated otherwise, JSON endpoints use `Content-Type: application/json`.
